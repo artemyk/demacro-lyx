@@ -3,15 +3,13 @@
 # *** USEFUL FUNCTIONS ***
 import re, argparse
 
-def parse_args(s, max_groups = None, break_on_nonbracket=False, separate_bracket_types=True):
-    if separate_bracket_types:
-        saved_groups = {'{':[],'[':[]}
-    else:
-        saved_groups = []
+def parse_args(s, max_groups=None, break_on_nonbracket=False):
+    saved_groups = []
         
     level = 0
     read_chars = 0
-    for c in s.strip():
+
+    for cndx, c in enumerate(s.strip()):
         read_chars += 1
         if level == 0: 
             if c == ' ':
@@ -24,7 +22,7 @@ def parse_args(s, max_groups = None, break_on_nonbracket=False, separate_bracket
                     read_chars -= 1
                     break
                     
-                in_group = c
+                group_type = c
                 level = 1
                 cur_group = ""
             
@@ -32,16 +30,13 @@ def parse_args(s, max_groups = None, break_on_nonbracket=False, separate_bracket
                 raise Exception(s, c)
                 
         elif c in '[{':
-            if c == in_group:
+            if c == group_type:
                 level += 1
             cur_group += c
 
-        elif (c==']' and in_group =='[') or (c=='}' and in_group=='{'):
+        elif (c==']' and group_type =='[') or (c=='}' and group_type=='{'):
             if level == 1:
-                if separate_bracket_types:
-                    saved_groups[in_group].append(cur_group)
-                else:
-                    saved_groups.append(cur_group)
+                saved_groups.append( (group_type, cur_group) )
                     
             else:
                 cur_group += c
@@ -62,21 +57,23 @@ def parse_macrodef(s):
         print(s)
         raise Exception()
      
-    saved_groups, _ =parse_args(v.group('definition'))
+    saved_groups, _  = parse_args(v.group('definition'))
     
     macroname = v.group('macroname')
-    assert(len(saved_groups['{'])==1)
-    if len(saved_groups['[']):
-        num_args = int(saved_groups['['][0])
-        if len(saved_groups['[']) > num_args+1:
+    mandatory_args = [g for group_type, g in saved_groups if group_type == '{']
+    optional_args  = [g for group_type, g in saved_groups if group_type == '[']
+    assert(len(mandatory_args)==1)
+    if len(optional_args):
+        num_args = int(optional_args[0])
+        if len(optional_args) > num_args+1:
             raise Exception(macroname)
             
-        argdefs = saved_groups['['][1:]
+        argdefs = optional_args[1:]
         argdefs += [None,]*(num_args-len(argdefs))
     else:
         argdefs = None
         
-    return macroname, argdefs, saved_groups['{'][0]
+    return macroname, argdefs, mandatory_args[0]
 
 
 def do_argmacrosubs(s, macros):
@@ -91,30 +88,34 @@ def do_argmacrosubs(s, macros):
                 break
             
             rest_of_string = s[result.start()+len(macroname):]
-            v, readchars=parse_args(rest_of_string, break_on_nonbracket=True, separate_bracket_types=False)
+            v, readchars=parse_args(rest_of_string, break_on_nonbracket=True)
             
             newV = macrosub
             for argnum in range(len(argdefs)):
-                if len(v)<=argnum or v[argnum] == "":
-                    cur_param_value = argdefs[argnum]
+                if len(v)<=argnum or v[argnum][1] == "":
+                    if len(v)>argnum and v[argnum][0] == '{': # mandatory argument 
+                        cur_param_value = ""
+                    else:
+                        cur_param_value = argdefs[argnum]
                 else:
-                    cur_param_value = v[argnum]
+                    cur_param_value = v[argnum][1]
 
                 if cur_param_value is None:
                     # sometimes argument to macros with non-optional arguments are not escaped
                     if len(argdefs)==1 and argdefs[0] is None:
-                        nextWord = re.search(r"\s*\w+\b", rest_of_string)
+                        nextWord = re.search(r"^\s*\w+\b", rest_of_string)
                         if nextWord: 
                             cur_param_value = nextWord.group().strip()
                             readchars = len(nextWord.group())
                             
                 if cur_param_value is None:
-                    print(macroname, argnum)
+                    print(macroname, argnum, cur_param_value)
                     raise Exception()
 
                 newV = newV.replace('#%d'%(argnum+1), ' '+cur_param_value+' ')
                 
             num_replacements += 1
+
             s = s[:result.start()]+" "+newV+" "+rest_of_string[readchars:]
             
     return s, num_replacements
@@ -123,6 +124,7 @@ def do_argmacrosubs(s, macros):
 import argparse
 
 parser = argparse.ArgumentParser(description='Remove macros from LyX file')
+parser.add_argument('-f', action='store_true', help='Overwrite output file if it exists')
 parser.add_argument('input_file', type=str, help='Source .lyx file')
 parser.add_argument('output_file', type=str, help='Target .lyx file')
 
@@ -134,12 +136,17 @@ if not os.path.exists(args.input_file):
 	raise Exception("Input file %s doesn't exist" % args.input_file)
 
 if os.path.exists(args.output_file):
-	raise Exception("Output file %s already exists, don't want to overwrite" % args.output_file)
+    if not args.f:
+    	raise Exception("Output file %s already exists, don't want to overwrite. Pass -f flag to overwrite" 
+            % args.output_file)
+    else:
+        print("Output file %s already exists, overwriting" % args.output_file)
 
 
 # **** READ IN FILE ***
 
 in_macro   = False
+in_note_inset_depth = 0
 s = "\\newcommand{"
 new_content = []
 macros = {}
@@ -147,9 +154,18 @@ macros = {}
 with open(args.input_file, "r") as f:
     for line in f.readlines():
         l = line.strip()
-        if l == "\\begin_inset FormulaMacro":
-            in_macro = True
-            skip_macro = False
+        if in_note_inset_depth > 0:
+            if l.startswith("\\begin_inset "):  
+                in_note_inset_depth += 1
+            elif line.strip() == "\\end_inset":
+                in_note_inset_depth -= 1
+
+        elif l == "\\begin_inset Note Note":  # We remove notes
+            in_note_inset_depth += 1
+
+        elif l == "\\begin_inset FormulaMacro":
+            in_macro       = True
+            skip_macro     = False
             current_block  = line
         elif in_macro:
             current_block += line
@@ -157,7 +173,7 @@ with open(args.input_file, "r") as f:
                 macroname, argdefs, macrodef = parse_macrodef(l)
                 macros[macroname] = (argdefs, macrodef)
                     
-            elif line.strip() == "\\end_inset":
+            elif l == "\\end_inset":
                 in_macro = False
 
             else:
