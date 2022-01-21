@@ -103,7 +103,7 @@ def do_argmacrosubs(s, macros):
                 if cur_param_value is None:
                     # sometimes argument to macros with non-optional arguments are not escaped
                     if len(argdefs)==1 and argdefs[0] is None:
-                        nextWord = re.search(r"^\s*\w+\b", rest_of_string)
+                        nextWord = re.search(r"^\s*[^\s]", rest_of_string)
                         if nextWord: 
                             cur_param_value = nextWord.group().strip()
                             readchars = len(nextWord.group())
@@ -120,27 +120,26 @@ def do_argmacrosubs(s, macros):
             
     return s, num_replacements
 
-
 import argparse
+import os.path
+print_pfx = r"% demacro-lyx:"
 
 parser = argparse.ArgumentParser(description='Remove macros from LyX file')
 parser.add_argument('-f', action='store_true', help='Overwrite output file if it exists')
 parser.add_argument('input_file', type=str, help='Source .lyx file')
-parser.add_argument('output_file', type=str, help='Target .lyx file')
+parser.add_argument('output_file', type=str, help='Target .lyx file', nargs='?', default=None)
 
 args = parser.parse_args()
-
-import os.path
 
 if not os.path.exists(args.input_file):
 	raise Exception("Input file %s doesn't exist" % args.input_file)
 
-if os.path.exists(args.output_file):
+if args.output_file is not None and os.path.exists(args.output_file):
     if not args.f:
     	raise Exception("Output file %s already exists, don't want to overwrite. Pass -f flag to overwrite" 
             % args.output_file)
     else:
-        print("Output file %s already exists, overwriting" % args.output_file)
+        print(print_pfx, "Output file %s already exists, overwriting" % args.output_file)
 
 
 # **** READ IN FILE ***
@@ -189,39 +188,38 @@ base_content = "".join(new_content)
 s = base_content
 
 while True:
+    print(print_pfx, "*** Doing another round of replacements ***")
     changed_in_this_round = False
-    
+ 
     while True:
         s, num_replacements1 = do_argmacrosubs(s, macros)
-        print("Replaced", num_replacements1)
+        print(print_pfx, "Replaced", num_replacements1)
         if num_replacements1 == 0:
             break
         else:
             changed_in_this_round = True
 
-    print()
     while True:
         num_replacements2 = 0
         for macroname, (argdefs, macrosub) in macros.items():
             if argdefs is None or len(argdefs) == 0: # no arguments
-                #if macroname == "\\pp":
-                #    print(re.escape(macroname) + "(?![A-Za-z])")
-                #    print(macrosub)
                 newV = " " + macrosub.replace("\\","\\\\") + " "
                 (s,n) = re.subn(re.escape(macroname) + "(?![A-Za-z])", newV, s)
             num_replacements2 += n
-        print("Replaced", num_replacements2)
+        print(print_pfx, "Replaced", num_replacements2)
         if num_replacements2 == 0:
             break
         else:
             changed_in_this_round = True
-    print()
     
     if not changed_in_this_round:
         break
 
-# *** SAVE ***
+# *** SAVE or PRINT ***
 
-with open(args.output_file, "w") as f:
-	f.write(s)
-	print("Written output to %s" % args.output_file)
+if args.output_file is not None:
+    with open(args.output_file, "w") as f:
+    	f.write(s)
+    	print(print_pfx, "Written output to %s" % args.output_file)
+else:
+    print(s)
