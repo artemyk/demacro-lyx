@@ -3,22 +3,30 @@
 # *** USEFUL FUNCTIONS ***
 import re, argparse
 
-def parse_args(s, max_groups=None, break_on_nonbracket=False):
+def parse_args(s, num_optional=None, num_mandatory=None):
     saved_groups = []
         
-    level = 0
-    read_chars = 0
+    level        = 0
+    read_chars   = 0
+    mandatory_ix = 0
 
-    for cndx, c in enumerate(s.strip()):
+    for cndx, c in enumerate(s):
         read_chars += 1
         if level == 0: 
             if c == ' ':
                 continue
-            elif c not in '[{' and break_on_nonbracket:
-                read_chars -= 1
-                break
+            elif c not in '[{':
+                c_mand = len([g for gtype, g in saved_groups if gtype=='{'])
+                if c_mand == num_mandatory:
+                    read_chars -= 1
+                    break
+                else:
+                    # Single character mandatory group
+                    saved_groups.append( ('{', c) )
+
             elif c in '[{':
-                if max_groups == sum(map(len, saved_groups)):
+                if num_optional is not None and num_mandatory is not None and \
+                   (num_optional+num_mandatory) == len(saved_groups):
                     read_chars -= 1
                     break
                     
@@ -40,6 +48,7 @@ def parse_args(s, max_groups=None, break_on_nonbracket=False):
                     
             else:
                 cur_group += c
+
             level -= 1
             
         else:
@@ -58,11 +67,18 @@ def parse_macrodef(s):
         raise Exception()
      
     saved_groups, _  = parse_args(v.group('definition'))
-    
+
     macroname = v.group('macroname')
+
     mandatory_args = [g for group_type, g in saved_groups if group_type == '{']
     optional_args  = [g for group_type, g in saved_groups if group_type == '[']
     assert(len(mandatory_args)==1)
+    for gndx, (group_type, g) in enumerate(saved_groups):
+        for group_type2, g2 in saved_groups[gndx:]:
+            if group_type == '{' and group_type2 == '[':
+                raise Exception("Parsing error: optional arguments must precede mandatory ones.")
+
+
     if len(optional_args):
         num_args = int(optional_args[0])
         if len(optional_args) > num_args+1:
@@ -72,7 +88,7 @@ def parse_macrodef(s):
         argdefs += [None,]*(num_args-len(argdefs))
     else:
         argdefs = None
-        
+
     return macroname, argdefs, mandatory_args[0]
 
 
@@ -88,30 +104,30 @@ def do_argmacrosubs(s, macros):
                 break
             
             rest_of_string = s[result.start()+len(macroname):]
-            v, readchars=parse_args(rest_of_string, break_on_nonbracket=True)
+            num_mandatory  = len([a for a in argdefs if a is None])
+            num_optional   = len([a for a in argdefs if a is not None])
+            saved_groups, readchars  = parse_args(rest_of_string, 
+                                                  num_optional=num_optional, 
+                                                  num_mandatory=num_mandatory)
+
             
             newV = macrosub
-            for argnum in range(len(argdefs)):
-                if len(v)<=argnum or v[argnum][1] == "":
-                    if len(v)>argnum and v[argnum][0] == '{': # mandatory argument 
-                        cur_param_value = ""
+            parsed_num = 0
+            for argnum, defval in enumerate(argdefs):
+                if defval is not None: # optional argument in definition
+                    if len(saved_groups) > parsed_num and saved_groups[parsed_num][0] == '[': 
+                        # parsed optional argument
+                        cur_param_value = saved_groups[parsed_num][1]
+                        parsed_num += 1
                     else:
-                        cur_param_value = argdefs[argnum]
-                else:
-                    cur_param_value = v[argnum][1]
-
-                if cur_param_value is None:
-                    # sometimes argument to macros with non-optional arguments are not escaped
-                    if len(argdefs)==1 and argdefs[0] is None:
-                        nextWord = re.search(r"^\s*[^\s]", rest_of_string)
-                        if nextWord: 
-                            cur_param_value = nextWord.group().strip()
-                            readchars = len(nextWord.group())
+                        cur_param_value = defval
+                else: # mandatory argument in definition
+                    if saved_groups[parsed_num][0] != '{': # didn't parsed mandatory argument
+                        raise Exception()
+                    else:
+                        cur_param_value = saved_groups[parsed_num][1]
+                        parsed_num += 1
                             
-                if cur_param_value is None:
-                    print(macroname, argnum, cur_param_value)
-                    raise Exception()
-
                 newV = newV.replace('#%d'%(argnum+1), ' '+cur_param_value+' ')
                 
             num_replacements += 1
@@ -122,7 +138,7 @@ def do_argmacrosubs(s, macros):
 
 import argparse
 import os.path
-print_pfx = r"% demacro-lyx:"
+print_pfx = r"# demacro-lyx:"
 
 parser = argparse.ArgumentParser(description='Remove macros from LyX file')
 parser.add_argument('-f', action='store_true', help='Overwrite output file if it exists')
@@ -146,7 +162,6 @@ if args.output_file is not None and os.path.exists(args.output_file):
 
 in_macro   = False
 in_note_inset_depth = 0
-s = "\\newcommand{"
 new_content = []
 macros = {}
 
@@ -166,17 +181,21 @@ with open(args.input_file, "r") as f:
             in_macro       = True
             skip_macro     = False
             current_block  = line
+
         elif in_macro:
             current_block += line
-            if l.startswith(s):
+            if l.startswith("\\newcommand{"):
                 macroname, argdefs, macrodef = parse_macrodef(l)
                 macros[macroname] = (argdefs, macrodef)
                     
+            elif l.startswith("\\renewcommand{"):
+                raise Exception("Redefined macros are not supported. Please make that each macro is defined only once.\n%s"% l)
+
             elif l == "\\end_inset":
                 in_macro = False
 
             else:
-                raise Exception("Unknown command:", l)
+                raise Exception("Unknown command: %s" % l)
         
         else:
             new_content += line
@@ -205,7 +224,7 @@ while True:
             if argdefs is None or len(argdefs) == 0: # no arguments
                 newV = " " + macrosub.replace("\\","\\\\") + " "
                 (s,n) = re.subn(re.escape(macroname) + "(?![A-Za-z])", newV, s)
-            num_replacements2 += n
+                num_replacements2 += n
         print(print_pfx, "Replaced", num_replacements2)
         if num_replacements2 == 0:
             break

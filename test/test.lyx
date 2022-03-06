@@ -1,0 +1,354 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass revtex4-1
+\begin_preamble
+%\DeclareMathOperator*{\argmin}{\arg\,\min}
+%\DeclareMathOperator*{\argmax}{\arg\,\max}
+
+\usepackage[capitalize]{cleveref}
+
+\let\oldref\ref
+\renewcommand{\ref}{\cref}
+
+\let\oldbibliography\bibliography
+\renewcommand{\bibliography}[1]{
+\renewcommand{\ref}{\oldref}
+\oldbibliography{#1}
+\renewcommand{\ref}{\cref}
+}
+
+%\usepackage[smallerops]{newtxmath}
+\usepackage{newtxtext}
+
+
+\crefname{thm}{Theorem}{Theorems}
+\crefname{lem}{Lemma}{Lemmas}
+\crefname{prop}{Proposition}{Propositions}
+\crefname{defn}{Definition}{Definitions}
+\crefname{rem}{Remark}{Remarks}
+\end_preamble
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine natbib
+\cite_engine_type authoryear
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset FormulaMacro
+\newcommand{\zzz}[3]{\{a,b#1\}#2#3}
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+% Two mandatory
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset FormulaMacro
+\newcommand{\aaaA}[2]{\{a,b#1\}#2}
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+% Two optional
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset FormulaMacro
+\newcommand{\aaaB}[2][][]{\{a#1,b#2\}}
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+% One optional, one mandatory
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset FormulaMacro
+\newcommand{\aaaC}[2][]{\{a#1,b#2\}}
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+% One mandatory, one greedy
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset FormulaMacro
+\newcommand{\aaaD}[2]{\{a,b\}#1#2}
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+% 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset FormulaMacro
+\newcommand{\bbb}[2][def\{\}1]{\{a#1,b#2\}}
+\end_inset
+
+
+\begin_inset FormulaMacro
+\newcommand{\ccc}[3][def\{\}1]{\{a#1,b#2\}#3}
+\end_inset
+
+
+\begin_inset FormulaMacro
+\newcommand{\ddd}[4][def\{\}1][]{\{a#1,b#3\}#4#2}
+\end_inset
+
+
+\begin_inset FormulaMacro
+\newcommand{\eee}[5][def\{\}1][][da]{\{a#1,b#4\}#5#2#3}
+\end_inset
+
+
+\begin_inset FormulaMacro
+\newcommand{\fff}[1][def\{\}1]{\{a,b\}#1}
+\end_inset
+
+
+\begin_inset FormulaMacro
+\newcommand{\ggg}[2][][]{\{a,b\}#1#2}
+\end_inset
+
+
+\begin_inset FormulaMacro
+\newcommand{\hhh}[3]{\{a,b\}#1#2#3}
+\end_inset
+
+
+\begin_inset FormulaMacro
+\newcommand{\jjj}[1]{\{a,b\}#1}
+\end_inset
+
+
+\begin_inset FormulaMacro
+\newcommand{\kkk}{\{a,b\}}
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\zzz cd1$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let's try them all, one 
+\begin_inset Formula $\aaaA{12}c$
+\end_inset
+
+ and 
+\begin_inset Formula $\aaaA 1c$
+\end_inset
+
+ and
+\begin_inset Formula $\aaaA{arg1}{arg2}$
+\end_inset
+
+, 
+\begin_inset Formula $\aaaB[c][1]$
+\end_inset
+
+ and 
+\begin_inset Formula $\aaaB[1][1]$
+\end_inset
+
+ and 
+\begin_inset Formula $\aaaB11$
+\end_inset
+
+ and 
+\begin_inset Formula $\aaaC[1]c$
+\end_inset
+
+.
+ By 
+\begin_inset Formula $\bbb{}$
+\end_inset
+
+ by 
+\begin_inset Formula $\ccc{}{}$
+\end_inset
+
+ by 
+\begin_inset Formula $\ddd{}{}$
+\end_inset
+
+ and 
+\begin_inset Formula $\eee{}{}$
+\end_inset
+
+.
+ Even 
+\begin_inset Formula $\ddd{}{}$
+\end_inset
+
+and 
+\begin_inset Formula $\eee{}{}$
+\end_inset
+
+ will do, but what about 
+\begin_inset Formula $\fff$
+\end_inset
+
+ and 
+\begin_inset Formula $\ggg$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Finally, 
+\begin_inset Formula $\hhh{}{}{}$
+\end_inset
+
+ and 
+\begin_inset Formula $\jjj{}$
+\end_inset
+
+ and 
+\begin_inset Formula $\kkk$
+\end_inset
+
+.
+\end_layout
+
+\end_body
+\end_document
